@@ -84,21 +84,23 @@ class SquashFsImage(SuperBlock):
 
 		# uid / gid 테이블
 		self.id_table = [] * self.no_ids
-		self.setUidGid()
+		self.setUidGuid()
 
 	def setCompressor(self):
 		for compressor in compressor_list:
 			if compressor.supported == self.compression:
 				return compressor
 
-	def setUidGid(self):
+	def setUidGuid(self):
 		index = SQUASHFS_ID_BLOCKS(self.no_ids)
 		self.image.seek(self.id_table_start, 0)
 		index_table = [ self.read_long(self.image) for i in range(0,index) ]
 		
 		for i in range(0, index):
 			self.image.seek(index_table[i])
-
+			block, next, bytes = self.read_block(self.image, index_table[i])
+			print block, next, bytes
+			
 	def read_block(self, file, n):
 		offset = 2
 		file.seek(n , 0)
@@ -107,9 +109,17 @@ class SquashFsImage(SuperBlock):
 		if SQUASHFS_CHECK_DATA(self.flags):
 			offset = 3
 
-		if SQUASHFS_COMPRESSED(c_byte):
-			self.file.seek(n + offset)
+		# 압축 되었으면
+		if SQUASHFS_COMPRESSED(c_byte): 
+			file.seek(n + offset)
 			c_byte = SQUASHFS_COMPRESSED_SIZE(c_byte)
-			buffer = self.file.read(c_byte)
+			buffer = file.read(c_byte)
+			block = self.compressor.uncompress(buffer)
+			return (block, n + offset + c_byte, c_byte)
+		else:
+			file.seek(n + offset)
+			c_byte = SQUASHFS_COMPRESSED_SIZE(c_byte)
+			block = file.read(c_byte)
+			return (block, n + offset + c_byte, c_byte)
 
 SquashFsImage(sys.argv[1])
