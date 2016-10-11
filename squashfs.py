@@ -83,7 +83,7 @@ class SquashFsImage(SuperBlock):
 		self.compressor = self.setCompressor()
 
 		# uid / gid 테이블
-		self.id_table = [] * self.no_ids
+		self.id_table = [None] * self.no_ids
 		self.setUidGuid()
 
 	def setCompressor(self):
@@ -95,12 +95,17 @@ class SquashFsImage(SuperBlock):
 		index = SQUASHFS_ID_BLOCKS(self.no_ids)
 		self.image.seek(self.id_table_start, 0)
 		index_table = [ self.read_long(self.image) for i in range(0,index) ]
-		
+
 		for i in range(0, index):
 			self.image.seek(index_table[i])
 			block, next, bytes = self.read_block(self.image, index_table[i])
-			print block, next, bytes
 			
+			offset = 0
+			idx = i * (SQUASHFS_METADATA_SIZE / 4)
+			while offset < len(block):
+				self.id_table[idx], offset = self.auto_make_buf_int(block, offset, 4)
+				idx+=1
+
 	def read_block(self, file, n):
 		offset = 2
 		file.seek(n , 0)
@@ -122,4 +127,5 @@ class SquashFsImage(SuperBlock):
 			block = file.read(c_byte)
 			return (block, n + offset + c_byte, c_byte)
 
-SquashFsImage(sys.argv[1])
+f = SquashFsImage(sys.argv[1])
+print f.id_table
