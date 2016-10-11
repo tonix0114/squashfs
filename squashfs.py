@@ -86,25 +86,14 @@ class SquashFsImage(SuperBlock):
 		self.id_table = [None] * self.no_ids
 		self.setUidGuid()
 
+		# fragment 테이블
+		self.fagment_table = []
+		self.setFragmentTable()
+
 	def setCompressor(self):
 		for compressor in compressor_list:
 			if compressor.supported == self.compression:
 				return compressor
-
-	def setUidGuid(self):
-		index = SQUASHFS_ID_BLOCKS(self.no_ids)
-		self.image.seek(self.id_table_start, 0)
-		index_table = [ self.read_long(self.image) for i in range(0,index) ]
-
-		for i in range(0, index):
-			self.image.seek(index_table[i])
-			block, next, bytes = self.read_block(self.image, index_table[i])
-			
-			offset = 0
-			idx = i * (SQUASHFS_METADATA_SIZE / 4)
-			while offset < len(block):
-				self.id_table[idx], offset = self.auto_make_buf_int(block, offset, 4)
-				idx+=1
 
 	def read_block(self, file, n):
 		offset = 2
@@ -126,6 +115,37 @@ class SquashFsImage(SuperBlock):
 			c_byte = SQUASHFS_COMPRESSED_SIZE(c_byte)
 			block = file.read(c_byte)
 			return (block, n + offset + c_byte, c_byte)
+
+	def setUidGuid(self):
+		index = SQUASHFS_ID_BLOCKS(self.no_ids)
+		self.image.seek(self.id_table_start, 0)
+		index_table = [ self.read_long(self.image) for i in range(0,index) ]
+
+		for i in range(0, index):
+			self.image.seek(index_table[i])
+			block, next, bytes = self.read_block(self.image, index_table[i])
+			
+			offset = 0
+			idx = i * (SQUASHFS_METADATA_SIZE / 4)
+			while offset < len(block):
+				self.id_table[idx], offset = self.auto_make_buf_int(block, offset, 4)
+				idx+=1
+				
+	def setFragmentTable(self):
+		index = SQUASHFS_FRAGMENT_INDEXES(self.fragments)
+		self.image.seek(self.fragment_table_start, 0)
+		index_table = [ self.read_long(self.image) for i in range(0, index) ]
+
+		table = ""
+		for i in range(0, index):
+			block = self.read_block(self.image, index_table[i])[0]
+			table += block
+
+		offset = 0
+		while offset < len(table):
+			pass
+
+
 
 f = SquashFsImage(sys.argv[1])
 print f.id_table
