@@ -9,4 +9,3 @@ class common:
 
 	def read_long(self, file):
 		return struct.unpack("<Q", file.read(8))[0]
-

@@ -1,6 +1,6 @@
 import zlib
 
-ZLIB_COMPRESSION        = 1
+ZLIB_COMPRESSION = 1
 
 class ZlibCompressor:
 	def __init__(self):
@@ -9,3 +9,6 @@ class ZlibCompressor:
 		
 	def uncompress(self, src):
 		return zlib.decompress(src)
+
+
+

@@ -1,8 +1,13 @@
+#-*- coding:utf-8 -*-
 import sys
-
 from common import common
+from compressor import *
+from squash_common import *
 
-class super_block(common):
+compressor_list = ( ZlibCompressor(), )
+
+class SuperBlock(common):
+
 	def __init__(self):
 		self.s_magic = ""
 		self.inodes = ""
@@ -23,8 +28,8 @@ class super_block(common):
 		self.directory_table_start = ""
 		self.fragment_table_start = ""
 		self.lookup_table_start = ""
-	
-	def get_hexuct(self, image):
+
+	def setStructure(self, image):
 		self.s_magic = self.read_int(image)
 		self.inodes = self.read_int(image)
 		self.mkfs_time = self.read_int(image)
@@ -66,9 +71,45 @@ class super_block(common):
 		print "[+] fragment_table_start : " + hex(self.fragment_table_start)
 		print "[+] lookup_table_start : " + hex(self.lookup_table_start)
 
+class SquashFsImage(SuperBlock):
+	def __init__(self, image):
+		# 스쿼시 파일 시스템 이미지		
+		self.image = open(image, 'rb')
 
-f = open(sys.argv[1])
+		# 슈퍼 블록    
+		self.setStructure(self.image)
 
-s = super_block()
-s.get_hexuct(f)
-s.view()
+		# 압축 방식
+		self.compressor = self.setCompressor()
+
+		# uid / gid 테이블
+		self.id_table = [] * self.no_ids
+		self.setUidGid()
+
+	def setCompressor(self):
+		for compressor in compressor_list:
+			if compressor.supported == self.compression:
+				return compressor
+
+	def setUidGid(self):
+		index = SQUASHFS_ID_BLOCKS(self.no_ids)
+		self.image.seek(self.id_table_start, 0)
+		index_table = [ self.read_long(self.image) for i in range(0,index) ]
+		
+		for i in range(0, index):
+			self.image.seek(index_table[i])
+
+	def read_block(self, file, n):
+		offset = 2
+		file.seek(n , 0)
+		c_byte = self.read_short(file)
+
+		if SQUASHFS_CHECK_DATA(self.flags):
+			offset = 3
+
+		if SQUASHFS_COMPRESSED(c_byte):
+			self.file.seek(n + offset)
+			c_byte = SQUASHFS_COMPRESSED_SIZE(c_byte)
+			buffer = self.file.read(c_byte)
+
+SquashFsImage(sys.argv[1])
