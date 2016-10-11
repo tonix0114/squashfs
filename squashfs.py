@@ -71,6 +71,23 @@ class SuperBlock(common):
 		print "[+] fragment_table_start : " + hex(self.fragment_table_start)
 		print "[+] lookup_table_start : " + hex(self.lookup_table_start)
 
+class FragmentEntry(common):
+	def __init__(self):
+		self.start_block = 0
+		self.size = 0
+		self.unused = 0
+
+	def setStructure(self, image):
+		self.start_block = self.read_long(image)
+		self.size = self.read_int(image)
+		self.unused = self.read_int(image)
+
+	def setBufToStructure(self, block, offset):
+		self.start_block, offset = self.auto_make_buf_int(block, offset, 8)
+		self.size, offset = self.auto_make_buf_int(block, offset, 4)
+		self.unused, offset = self.auto_make_buf_int(block, offset, 4)
+		return offset
+
 class SquashFsImage(SuperBlock):
 	def __init__(self, image):
 		# 스쿼시 파일 시스템 이미지		
@@ -87,7 +104,7 @@ class SquashFsImage(SuperBlock):
 		self.setUidGuid()
 
 		# fragment 테이블
-		self.fagment_table = []
+		self.fragment_table = []
 		self.setFragmentTable()
 
 	def setCompressor(self):
@@ -130,7 +147,7 @@ class SquashFsImage(SuperBlock):
 			while offset < len(block):
 				self.id_table[idx], offset = self.auto_make_buf_int(block, offset, 4)
 				idx+=1
-				
+
 	def setFragmentTable(self):
 		index = SQUASHFS_FRAGMENT_INDEXES(self.fragments)
 		self.image.seek(self.fragment_table_start, 0)
@@ -143,9 +160,11 @@ class SquashFsImage(SuperBlock):
 
 		offset = 0
 		while offset < len(table):
-			pass
+			fragment_entry = FragmentEntry()
+			offset = fragment_entry.setBufToStructure(table, offset)
+			self.fragment_table.append(fragment_entry)
 
 
 
 f = SquashFsImage(sys.argv[1])
-print f.id_table
+print len(f.fragment_table)
