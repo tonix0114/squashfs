@@ -107,6 +107,13 @@ class SquashFsImage(SuperBlock):
 		self.fragment_table = []
 		self.setFragmentTable()
 
+		# inode 테이블
+		self.inode_table = ""
+		self.inode_index_table = {}
+		self.setInodeTable()
+
+
+
 	def setCompressor(self):
 		for compressor in compressor_list:
 			if compressor.supported == self.compression:
@@ -147,7 +154,6 @@ class SquashFsImage(SuperBlock):
 			while offset < len(block):
 				self.id_table[idx], offset = self.auto_make_buf_int(block, offset, 4)
 				idx+=1
-
 	def setFragmentTable(self):
 		index = SQUASHFS_FRAGMENT_INDEXES(self.fragments)
 		self.image.seek(self.fragment_table_start, 0)
@@ -163,8 +169,14 @@ class SquashFsImage(SuperBlock):
 			fragment_entry = FragmentEntry()
 			offset = fragment_entry.setBufToStructure(table, offset)
 			self.fragment_table.append(fragment_entry)
-
+	def setInodeTable(self):
+		start = self.inode_table_start
+		end = self.directory_table_start
+		while start < end:
+			self.inode_index_table[start] = len(self.inode_table)
+			block, start, bytes = self.read_block(self.image, start)
+			self.inode_table += block
 
 
 f = SquashFsImage(sys.argv[1])
-print len(f.fragment_table)
+print f.inode_index_table

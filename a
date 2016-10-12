@@ -1,0 +1,5 @@
+csh The C shell (optional)
+ed The ‘ed’ editor (optional)
+tar The tar archiving utility (optional)
+cpio The cpio archiving utility (optional)
+gzip The GNU compression utility (optional) gunzip The GNU uncompression utility (optional) zcat The GNU uncompression utility (optional) netstat The network statistics utility (optional) pin
