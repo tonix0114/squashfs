@@ -6,6 +6,28 @@ from squash_common import *
 
 compressor_list = ( ZlibCompressor(), )
 
+
+class Inode(common):
+	def __init__(self, image):
+		self.squash_imgae = image
+		self.blocks = 0
+		self.block_ptr = 0
+		self.data = 0
+		self.fragment = 0
+		self.frag_bytes = 0
+		self.gid = 0
+		self.inode_number = 0
+		self.mode = 0
+		self.offset = 0
+		self.start = 0
+		self.symlink = 0
+		self.time = 0
+		self.type = 0
+		self.uid = 0
+		self.sparse = 0
+		self.xattr = 0
+
+
 class SuperBlock(common):
 
 	def __init__(self):
@@ -99,6 +121,13 @@ class XattrTable(common):
 		self.xattr_ids = self.read_int(image)
 		self.unused = self.read_int(image)
 
+class SquashFsFile():
+	def __init__(self, name, parent):
+		self.name = name
+		self.parent = parent
+		self.child  = []
+		self.inode = ""
+
 class SquashFsImage(SuperBlock):
 	def __init__(self, image):
 		# 스쿼시 파일 시스템 이미지		
@@ -128,12 +157,27 @@ class SquashFsImage(SuperBlock):
 		self.directory_index_table = {}
 		self.setDirectoryTable()
 
+		# Xattr 
+		self.xattr_table = ""
+		self.setXattrTable()
+
+		# root path
+		self.root = SquashFsFile("", None)
+		self.pre_scan("root", SQUASHFS_INODE_BLK(self.root_inode), SQUASHFS_INODE_OFFSET(self.root_inode), self.root)
+
 
 
 	def setCompressor(self):
 		for compressor in compressor_list:
 			if compressor.supported == self.compression:
 				return compressor
+
+	def read_inode(self, start, offset):
+		start = self.inode_table_start + start
+		bytes = self.inode_index_table[start]
+		block_ptr = bytes + offset
+		inode = Inode(self)
+
 
 	def read_block(self, file, n):
 		offset = 2
@@ -155,6 +199,8 @@ class SquashFsImage(SuperBlock):
 			c_byte = SQUASHFS_COMPRESSED_SIZE(c_byte)
 			block = file.read(c_byte)
 			return (block, n + offset + c_byte, c_byte)
+	def squashfs_opendir(self,start, offset, parent):
+		self.read_inode(start, offset)
 
 	def setUidGuid(self):
 		index = SQUASHFS_ID_BLOCKS(self.no_ids)
@@ -199,6 +245,16 @@ class SquashFsImage(SuperBlock):
 			self.directory_index_table[start] = len(self.directory_table)
 			block, start, bytes = self.read_block(self.image, start)
 			self.directory_table += block
+	def setXattrTable(self):
+		if self.xattr_id_table_start == SQUASHFS_INVALID_BLK:
+			return SQUASHFS_INVALID_BLK
+		self.image.seek(self.xattr_id_table_start)
+		xattr = XattrTable()
+		xattr.setStructure(self.image)
+		# 이 부분은 아직 구현 안해도될것 같음. ( 로보킹 스쿼시에서 사용 X ? )
+
+	def pre_scan(self, parent_name, start, offset, parent):
+		self.squashfs_opendir(start, offset, parent)
 
 f = SquashFsImage(sys.argv[1])
-print f.inode_index_table
+print f.view()
