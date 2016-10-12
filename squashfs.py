@@ -112,7 +112,10 @@ class SquashFsImage(SuperBlock):
 		self.inode_index_table = {}
 		self.setInodeTable()
 
-
+		# directory 테이블
+		self.directory_table = ""
+		self.directory_index_table = {}
+		self.setDirectoryTable()
 
 	def setCompressor(self):
 		for compressor in compressor_list:
@@ -176,7 +179,13 @@ class SquashFsImage(SuperBlock):
 			self.inode_index_table[start] = len(self.inode_table)
 			block, start, bytes = self.read_block(self.image, start)
 			self.inode_table += block
-
+	def setDirectoryTable(self):
+		start = self.directory_table_start
+		end   = self.fragment_table_start
+		while start < end:
+			self.directory_index_table[start] = len(self.directory_table)
+			block, start, bytes = self.read_block(self.image, start)
+			self.directory_table += block
 
 f = SquashFsImage(sys.argv[1])
 print f.inode_index_table
