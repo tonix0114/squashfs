@@ -88,6 +88,17 @@ class FragmentEntry(common):
 		self.unused, offset = self.auto_make_buf_int(block, offset, 4)
 		return offset
 
+class XattrTable(common):
+	def __init__(self):
+		self.xattr_table_start = ""
+		self.xattr_ids = ""
+		self.unused = ""
+
+	def setStructure(self, image):
+		self.xattr_table_start = self.read_long(image)
+		self.xattr_ids = self.read_int(image)
+		self.unused = self.read_int(image)
+
 class SquashFsImage(SuperBlock):
 	def __init__(self, image):
 		# 스쿼시 파일 시스템 이미지		
@@ -116,6 +127,8 @@ class SquashFsImage(SuperBlock):
 		self.directory_table = ""
 		self.directory_index_table = {}
 		self.setDirectoryTable()
+
+
 
 	def setCompressor(self):
 		for compressor in compressor_list:
